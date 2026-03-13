@@ -333,6 +333,8 @@ button {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-badge {
@@ -425,20 +427,23 @@ button {
   align-items: center;
   justify-content: center;
   height: 420px;
-  overflow: hidden;
 }
 
+/* Hero background image — left half of hero section */
 .hero-bg-image {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
   background-image: url('../freepik__the-style-is-candid-image-photography-with-natural__3351.png');
   background-size: cover;
-  background-position: center;
-  opacity: 0.18;
-  mask-image: radial-gradient(ellipse 88% 88% at 55% 50%, black 30%, transparent 72%);
-  -webkit-mask-image: radial-gradient(ellipse 88% 88% at 55% 50%, black 30%, transparent 72%);
+  background-position: center top;
+  opacity: 0.22;
+  mask-image: linear-gradient(to right, black 45%, rgba(0,0,0,0.5) 72%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black 45%, rgba(0,0,0,0.5) 72%, transparent 100%);
   z-index: 0;
-  border-radius: 16px;
+  pointer-events: none;
 }
 
 .hero-logo-circle {
