@@ -84,7 +84,15 @@ async function pbPatch(path, data) {
     });
     if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
-        throw new Error(`PB PATCH ${path} failed: ${res.status} — ${errBody?.message || JSON.stringify(errBody)}`);
+        // Log full error to console for debugging
+        console.error('PocketBase PATCH error:', JSON.stringify(errBody, null, 2));
+        // Include field-level detail in the thrown message
+        const fieldDetail = errBody?.data && Object.keys(errBody.data).length
+            ? ' | campos: ' + Object.entries(errBody.data)
+                .map(([f, v]) => `${f}: ${v?.code || v?.message || JSON.stringify(v)}`)
+                .join(', ')
+            : '';
+        throw new Error(`${res.status} — ${errBody?.message || 'Error'}${fieldDetail}`);
     }
     return res.json();
 }
@@ -903,7 +911,6 @@ class AdminPanel {
             // Also update localStorage for compatibility with main.js
             localStorage.setItem('aboutStats', JSON.stringify({ creaciones, clientes }));
 
-            this.updateWebsiteStats(creaciones, clientes);
             this.showToast('Estadísticas actualizadas exitosamente! 📊', 'success');
 
         } catch (err) {

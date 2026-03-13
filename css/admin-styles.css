@@ -595,12 +595,14 @@ body {
     top: 20px;
     right: 20px;
     z-index: 9999;
-    transform: translateX(400px);
-    transition: transform 0.3s ease;
+    transform: translateY(calc(-100% - 40px));
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
 .toast.show {
-    transform: translateX(0);
+    transform: translateY(0);
+    opacity: 1;
 }
 
 .toast-content {
