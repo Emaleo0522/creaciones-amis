@@ -1,5 +1,26 @@
 User-agent: *
+Allow: /
 Disallow: /admin.html
 Disallow: /gallery-test.html
+Disallow: /gallery-test.js
 
-Sitemap: https://creaciones-amis.vercel.app/sitemap.xml
+# AI crawlers — explicitly allowed
+User-agent: GPTBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+Sitemap: https://creacionesamis.vercel.app/sitemap.xml

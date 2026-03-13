@@ -1,0 +1,30 @@
+# Creaciones AMIS
+
+> Artesanías en goma eva hechas a mano desde San Rafael, Mendoza, Argentina. Envíos a todo el país.
+
+## Sobre nosotros
+
+Creaciones AMIS es un emprendimiento artesanal ubicado en San Rafael, Mendoza, Argentina. Nos especializamos en la elaboración de productos en goma eva hechos a mano, personalizados para cada cliente. Cada creación está pensada para hacer los momentos especiales todavía más memorables.
+
+## Productos
+
+- **Baby Shower**: Decoraciones temáticas personalizadas para celebrar la llegada de un bebé. Temas: monitos, selva, personalizados.
+- **Material Educativo**: Recursos didácticos coloridos para escuelas y hogares. Tableros, números, letras.
+- **Personajes Temáticos**: Figuras artesanales de personajes favoritos. Disney, cuentos, superhéroes.
+- **Recursos Didácticos**: Animales y elementos educativos apilables para los más pequeños.
+- **Toppers y Decoraciones**: Decoraciones para tortas y vasos. Toppers, stickers, centros de mesa.
+- **Libros Sensoriales**: Libros interactivos que estimulan el desarrollo sensorial infantil. Texturas, colores, formas.
+
+## Ubicación y contacto
+
+- **Ubicación**: San Rafael, Mendoza, Argentina
+- **WhatsApp**: +54 9 2604 201185
+- **Instagram**: [@creacionesamis.sr](https://www.instagram.com/creacionesamis.sr/)
+- **Envíos**: A todo Argentina
+
+## Links importantes
+
+- [Inicio](https://creacionesamis.vercel.app/)
+- [Galería de creaciones](https://creacionesamis.vercel.app/#galeria)
+- [Productos](https://creacionesamis.vercel.app/#productos)
+- [Contacto y pedidos](https://creacionesamis.vercel.app/#contacto)

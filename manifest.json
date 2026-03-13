@@ -1,0 +1,22 @@
+{
+  "name": "Creaciones AMIS",
+  "short_name": "AMIS",
+  "description": "Artesanías en goma eva hechas con amor desde San Rafael, Mendoza.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#E91E63",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "assets/logos/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/logos/logo-hd.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
