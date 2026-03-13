@@ -306,14 +306,14 @@ button {
    ============================================ */
 .hero {
   min-height: 100vh;
-  padding: 110px 24px 80px;
+  padding: 110px max(24px, calc((100vw - 1200px) / 2)) 80px;
   background: linear-gradient(135deg, var(--primary-pale) 0%, var(--white) 60%);
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: center;
   gap: 48px;
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
   position: relative;
 }
 
