@@ -499,7 +499,7 @@ let currentImageList = [];
 async function loadGalleryItems() {
     try {
         const res = await fetch(
-            `${PB_URL}/api/collections/amis_gallery/records?filter=(published=true)&sort=orden,created&perPage=200`
+            `${PB_URL}/api/collections/amis_gallery/records?filter=(published=true)&sort=+orden&perPage=200`
         );
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
