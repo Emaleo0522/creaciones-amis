@@ -329,6 +329,18 @@ button {
   pointer-events: none;
 }
 
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('../freepik__the-style-is-candid-image-photography-with-natural__3351.png');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .hero-content {
   display: flex;
   flex-direction: column;
@@ -427,24 +439,9 @@ button {
   align-items: center;
   justify-content: center;
   height: 420px;
+  z-index: 1;
 }
 
-/* Hero background image — left half of hero section */
-.hero-bg-image {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 50%;
-  height: 100%;
-  background-image: url('../freepik__the-style-is-candid-image-photography-with-natural__3351.png');
-  background-size: cover;
-  background-position: center top;
-  opacity: 0.22;
-  mask-image: linear-gradient(to right, black 45%, rgba(0,0,0,0.5) 72%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, black 45%, rgba(0,0,0,0.5) 72%, transparent 100%);
-  z-index: 0;
-  pointer-events: none;
-}
 
 .hero-logo-circle {
   width: 280px;
