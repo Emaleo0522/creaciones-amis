@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel Admin - Creaciones AMIS</title>
+    <!-- Exclude admin panel from search engine indexing -->
+    <meta name="robots" content="noindex, nofollow">
     <link rel="stylesheet" href="css/admin-styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -89,8 +91,12 @@
                     <div class="filters">
                         <select id="categoryFilter">
                             <option value="all">Todas las categorías</option>
-                            <option value="imagenes">Imágenes</option>
-                            <option value="videos">Videos</option>
+                            <option value="baby-shower">🍼 Baby Shower</option>
+                            <option value="material-educativo">📚 Material Educativo</option>
+                            <option value="personajes">🦸 Personajes</option>
+                            <option value="recursos-didacticos">📐 Recursos Didácticos</option>
+                            <option value="toppers">🎂 Toppers</option>
+                            <option value="libros-sensoriales">📕 Libros Sensoriales</option>
                         </select>
                         <button id="viewToggle" class="btn-secondary">
                             <i class="fas fa-th"></i>
@@ -114,7 +120,7 @@
                         <div id="dropZone" class="drop-zone">
                             <i class="fas fa-cloud-upload-alt"></i>
                             <h3>Arrastra archivos aquí o haz clic para seleccionar</h3>
-                            <p>Soporta: JPG, PNG, MP4, MOV (Máx. 50MB)</p>
+                            <p>Soporta: JPG, PNG, WEBP, MP4, MOV · Las imágenes se optimizan automáticamente · Máx. 50MB</p>
                             <input type="file" id="fileInput" multiple accept="image/*,video/*" hidden>
                         </div>
                         
@@ -133,8 +139,12 @@
                             <label for="category">Categoría *</label>
                             <select id="category" required>
                                 <option value="">Seleccionar categoría</option>
-                                <option value="imagenes">📸 Imágenes</option>
-                                <option value="videos">📹 Videos</option>
+                                <option value="baby-shower">🍼 Baby Shower</option>
+                                <option value="material-educativo">📚 Material Educativo</option>
+                                <option value="personajes">🦸 Personajes Temáticos</option>
+                                <option value="recursos-didacticos">📐 Recursos Didácticos</option>
+                                <option value="toppers">🎂 Toppers & Decoraciones</option>
+                                <option value="libros-sensoriales">📕 Libros Sensoriales</option>
                             </select>
                         </div>
                     </div>

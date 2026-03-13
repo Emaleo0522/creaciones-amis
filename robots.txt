@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /admin.html
+Disallow: /gallery-test.html
+
+Sitemap: https://creaciones-amis.vercel.app/sitemap.xml

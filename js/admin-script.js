@@ -1,4 +1,103 @@
-// ===== ADMIN PANEL JAVASCRIPT - CREACIONES AMI =====
+// ===== ADMIN PANEL JAVASCRIPT - CREACIONES AMIS =====
+// Backend: PocketBase http://161.153.203.83:8090
+
+const PB_URL = 'http://161.153.203.83:8090';
+const ADMIN_EMAIL = 'admin@creacionesamis.sr';
+
+// ===== IMAGE COMPRESSION =====
+// Compresses images client-side before upload using Canvas API.
+// - Resizes to max 1920px wide (preserving aspect ratio)
+// - Converts to WEBP for smaller file size (iOS 14+ supports WEBP)
+// - Falls back to JPEG if WEBP not supported
+// - Videos are returned unmodified
+async function compressImage(file, maxWidth = 1920, quality = 0.85) {
+    if (!file.type.startsWith('image/')) return file;
+
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+                let { width, height } = img;
+
+                // Scale down only if larger than maxWidth
+                if (width > maxWidth) {
+                    height = Math.round(height * maxWidth / width);
+                    width = maxWidth;
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Try WEBP first (better compression), fall back to JPEG
+                canvas.toBlob(
+                    (blob) => {
+                        if (!blob) { resolve(file); return; }
+                        const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+                        const newName = file.name.replace(/\.[^.]+$/, `.${ext}`);
+                        const compressed = new File([blob], newName, { type: blob.type });
+                        resolve(compressed);
+                    },
+                    'image/webp',
+                    quality
+                );
+            };
+            img.onerror = () => resolve(file); // fallback: upload original
+            img.src = ev.target.result;
+        };
+        reader.onerror = () => resolve(file);
+        reader.readAsDataURL(file);
+    });
+}
+
+// ===== PocketBase API helpers =====
+
+function getToken() {
+    return sessionStorage.getItem('amis_token');
+}
+
+function authHeaders() {
+    return {
+        'Authorization': getToken() || '',
+        'Content-Type': 'application/json'
+    };
+}
+
+async function pbGet(path) {
+    const res = await fetch(`${PB_URL}${path}`, {
+        headers: { 'Authorization': getToken() || '' }
+    });
+    if (!res.ok) throw new Error(`PB GET ${path} failed: ${res.status}`);
+    return res.json();
+}
+
+async function pbPatch(path, data) {
+    const res = await fetch(`${PB_URL}${path}`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(`PB PATCH ${path} failed: ${res.status}`);
+    return res.json();
+}
+
+async function pbDelete(path) {
+    const res = await fetch(`${PB_URL}${path}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': getToken() || '' }
+    });
+    if (!res.ok) throw new Error(`PB DELETE ${path} failed: ${res.status}`);
+}
+
+function getFileUrl(record, thumb = false) {
+    const base = `${PB_URL}/api/files/amis_gallery/${record.id}/${record.file}`;
+    // Use PocketBase thumbnail for admin gallery previews (saves bandwidth)
+    return thumb ? `${base}?thumb=400x200` : base;
+}
 
 class AdminPanel {
     constructor() {
@@ -6,243 +105,255 @@ class AdminPanel {
         this.currentTab = 'gallery';
         this.galleryItems = [];
         this.isGridView = true;
-        
+        this.editingItemId = null;
+
         this.init();
-        this.loadDemoData();
     }
-    
+
     init() {
-        // Event listeners
         this.setupEventListeners();
-        
-        // Check if user is already logged in
         this.checkExistingSession();
     }
-    
+
     setupEventListeners() {
         // Login form
         document.getElementById('loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleLogin();
         });
-        
+
         // Logout button
         document.getElementById('logoutBtn').addEventListener('click', () => {
             this.handleLogout();
         });
-        
+
         // Navigation tabs
         document.querySelectorAll('.nav-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
-                this.switchTab(e.target.dataset.tab);
+                this.switchTab(e.currentTarget.dataset.tab);
             });
         });
-        
+
         // File upload
         this.setupFileUpload();
-        
+
         // Upload form
         document.getElementById('uploadForm').addEventListener('submit', (e) => {
             e.preventDefault();
             this.handleFileUpload();
         });
-        
+
         // Save draft button
         document.getElementById('saveDraftBtn').addEventListener('click', () => {
             this.saveDraft();
         });
-        
+
         // View toggle
         document.getElementById('viewToggle').addEventListener('click', () => {
             this.toggleView();
         });
-        
+
         // Category filter
         document.getElementById('categoryFilter').addEventListener('change', (e) => {
             this.filterGallery(e.target.value);
         });
-        
+
         // Close modals
         document.querySelectorAll('.close-modal').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.closeModal();
             });
         });
-        
+
+        // Edit form submit
+        document.getElementById('editForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.saveEditItem();
+        });
+
         // Toast close
         document.getElementById('closeToast').addEventListener('click', () => {
             this.hideToast();
         });
-        
+
         // Settings buttons
         document.getElementById('saveWhatsappBtn').addEventListener('click', () => {
             this.saveWhatsappSettings();
         });
-        
+
         document.getElementById('saveStatsBtn').addEventListener('click', () => {
             this.saveAboutStats();
         });
     }
-    
+
     // ===== AUTHENTICATION =====
-    
+
     checkExistingSession() {
-        const savedUser = localStorage.getItem('amiAdminUser');
-        if (savedUser) {
-            this.currentUser = JSON.parse(savedUser);
+        const token = sessionStorage.getItem('amis_token');
+        const userData = sessionStorage.getItem('amis_user');
+        if (token && userData) {
+            this.currentUser = JSON.parse(userData);
             this.showDashboard();
         } else {
             this.showLogin();
         }
     }
-    
-    handleLogin() {
+
+    async handleLogin() {
         const password = document.getElementById('password').value;
-        
+
         if (!password) {
             this.showToast('Por favor ingresa tu contraseña', 'error');
             return;
         }
-        
-        // Verificar contraseña específica
-        if (password === 'PameJose2025') {
-            this.currentUser = {
+
+        this.showToast('Verificando...', 'info');
+
+        try {
+            const res = await fetch(`${PB_URL}/api/collections/amis_users/auth-with-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identity: ADMIN_EMAIL, password })
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.message || 'Contraseña incorrecta');
+            }
+
+            const data = await res.json();
+            const token = data.token;
+            const record = data.record;
+
+            sessionStorage.setItem('amis_token', token);
+            sessionStorage.setItem('amis_user', JSON.stringify({
                 type: 'admin',
-                name: 'Administrador',
+                name: record.name || record.email || 'Administrador',
+                email: record.email,
                 loginTime: new Date().toISOString()
-            };
-            
-            // Guardar sesión
-            localStorage.setItem('amiAdminUser', JSON.stringify(this.currentUser));
-            
-            this.showToast(`¡Bienvenida! 👋`, 'success');
+            }));
+
+            this.currentUser = JSON.parse(sessionStorage.getItem('amis_user'));
+            this.showToast('¡Bienvenida! 👋', 'success');
             this.showDashboard();
-        } else {
+
+        } catch (err) {
             this.showToast('Contraseña incorrecta', 'error');
         }
     }
-    
+
     handleLogout() {
-        localStorage.removeItem('amiAdminUser');
+        sessionStorage.removeItem('amis_token');
+        sessionStorage.removeItem('amis_user');
         this.currentUser = null;
+        this.galleryItems = [];
         this.showToast('Sesión cerrada correctamente', 'success');
         this.showLogin();
     }
-    
+
     showLogin() {
         document.getElementById('loginModal').classList.add('active');
         document.getElementById('adminDashboard').classList.remove('active');
-        
-        // Reset form
         document.getElementById('loginForm').reset();
     }
-    
+
     showDashboard() {
         document.getElementById('loginModal').classList.remove('active');
         document.getElementById('adminDashboard').classList.add('active');
-        
-        // Update user info
-        document.getElementById('currentUser').textContent = 
+
+        document.getElementById('currentUser').textContent =
             `${this.currentUser.name} 👑`;
-        
-        // Load initial data
+
         this.loadGalleryContent();
         this.loadStats();
         this.loadRecentActivity();
     }
-    
+
     // ===== NAVIGATION =====
-    
+
     switchTab(tabName) {
-        // Update active tab
         document.querySelectorAll('.nav-tab').forEach(tab => {
             tab.classList.remove('active');
         });
         document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-        
-        // Update active content
+
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
         });
         document.getElementById(`${tabName}Tab`).classList.add('active');
-        
+
         this.currentTab = tabName;
-        
-        // Load specific content if needed
+
         if (tabName === 'stats') {
             this.loadAnalytics();
         } else if (tabName === 'settings') {
             this.loadSettings();
         }
     }
-    
+
     // ===== FILE UPLOAD =====
-    
+
     setupFileUpload() {
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
-        
-        // Click to select files
+
         dropZone.addEventListener('click', () => {
             fileInput.click();
         });
-        
-        // File input change
+
         fileInput.addEventListener('change', (e) => {
             this.handleFiles(e.target.files);
         });
-        
-        // Drag and drop
+
         dropZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             dropZone.style.borderColor = 'var(--accent-pink)';
             dropZone.style.background = '#f8f9fa';
         });
-        
+
         dropZone.addEventListener('dragleave', () => {
             dropZone.style.borderColor = 'var(--primary-pink)';
             dropZone.style.background = '';
         });
-        
+
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.style.borderColor = 'var(--primary-pink)';
             dropZone.style.background = '';
-            
             this.handleFiles(e.dataTransfer.files);
         });
     }
-    
+
     handleFiles(files) {
         const filePreview = document.getElementById('filePreview');
         filePreview.innerHTML = '';
         filePreview.classList.remove('hidden');
-        
-        Array.from(files).forEach((file, index) => {
+
+        Array.from(files).forEach((file) => {
             if (this.validateFile(file)) {
                 const previewItem = this.createFilePreview(file);
                 filePreview.appendChild(previewItem);
             }
         });
     }
-    
+
     validateFile(file) {
         const maxSize = 50 * 1024 * 1024; // 50MB
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/mov'];
-        
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/mov', 'video/quicktime'];
+
         if (file.size > maxSize) {
             this.showToast(`El archivo ${file.name} es demasiado grande (máx. 50MB)`, 'error');
             return false;
         }
-        
+
         if (!allowedTypes.includes(file.type)) {
             this.showToast(`Tipo de archivo no soportado: ${file.name}`, 'error');
             return false;
         }
-        
+
         return true;
     }
-    
+
     createFilePreview(file) {
         const div = document.createElement('div');
         div.className = 'file-preview-item';
@@ -253,138 +364,159 @@ class AdminPanel {
             background: #fff;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         `;
-        
+
         if (file.type.startsWith('image/')) {
             const img = document.createElement('img');
-            img.style.cssText = `
-                width: 100%;
-                height: 100px;
-                object-fit: cover;
-            `;
+            img.style.cssText = `width: 100%; height: 100px; object-fit: cover;`;
             const reader = new FileReader();
             reader.onload = (e) => img.src = e.target.result;
             reader.readAsDataURL(file);
             div.appendChild(img);
         } else {
             const video = document.createElement('video');
-            video.style.cssText = `
-                width: 100%;
-                height: 100px;
-                object-fit: cover;
-            `;
+            video.style.cssText = `width: 100%; height: 100px; object-fit: cover;`;
             video.controls = false;
             const reader = new FileReader();
             reader.onload = (e) => video.src = e.target.result;
             reader.readAsDataURL(file);
             div.appendChild(video);
         }
-        
+
         const fileName = document.createElement('p');
         fileName.textContent = file.name;
-        fileName.style.cssText = `
-            padding: 8px;
-            margin: 0;
-            font-size: 0.8rem;
-            text-align: center;
-            background: #f8f9fa;
-        `;
+        fileName.style.cssText = `padding: 8px; margin: 0; font-size: 0.8rem; text-align: center; background: #f8f9fa;`;
         div.appendChild(fileName);
-        
+
         return div;
     }
-    
+
     handleFileUpload() {
-        const title = document.getElementById('title').value;
+        const title = document.getElementById('title').value.trim();
         const category = document.getElementById('category').value;
-        const description = document.getElementById('description').value;
-        const price = document.getElementById('price').value;
-        const tags = document.getElementById('tags').value;
+        const description = document.getElementById('description').value.trim();
         const files = document.getElementById('fileInput').files;
-        
+
         if (!title || !category) {
             this.showToast('Por favor completa los campos obligatorios', 'error');
             return;
         }
-        
+
         if (files.length === 0) {
             this.showToast('Por favor selecciona al menos un archivo', 'error');
             return;
         }
-        
-        // Simular upload (aquí iría la lógica real con Supabase)
-        this.simulateUpload(title, category, description, price, tags, files);
+
+        // Upload each file to PocketBase
+        this.uploadToPocketBase(title, category, description, files[0]);
     }
-    
-    simulateUpload(title, category, description, price, tags, files) {
-        this.showToast('Subiendo archivos...', 'info');
-        
-        // Simular delay de upload
-        setTimeout(() => {
-            const newItem = {
-                id: Date.now().toString(),
-                title,
-                category,
-                description,
-                price: price ? parseFloat(price) : null,
-                tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
-                files: Array.from(files).map(file => ({
-                    name: file.name,
-                    type: file.type,
-                    size: file.size
-                })),
-                uploadedBy: this.currentUser.name,
-                uploadDate: new Date().toISOString(),
-                status: 'published',
-                views: 0,
-                likes: 0
-            };
-            
-            this.galleryItems.unshift(newItem);
-            this.saveToLocalStorage();
-            this.loadGalleryContent();
-            this.loadStats();
-            
+
+    async uploadToPocketBase(title, category, description, file) {
+        try {
+            let processedFile = file;
+
+            // Compress images client-side before upload
+            if (file.type.startsWith('image/')) {
+                this.showToast('Optimizando imagen...', 'info');
+                processedFile = await compressImage(file);
+                const savedKB = Math.round((file.size - processedFile.size) / 1024);
+                if (savedKB > 0) {
+                    console.log(`Image compressed: ${file.name} → ${processedFile.name} (saved ${savedKB}KB)`);
+                }
+            }
+
+            this.showToast('Subiendo...', 'info');
+
+            // Auto-detect tipo based on MIME type
+            const tipo = processedFile.type.startsWith('image/') ? 'imagen' : 'video';
+
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('description', description);
+            formData.append('category', category);
+            formData.append('tipo', tipo);
+            formData.append('published', 'true');
+            formData.append('orden', '0');
+            formData.append('file', processedFile);
+
+            const res = await fetch(`${PB_URL}/api/collections/amis_gallery/records`, {
+                method: 'POST',
+                headers: { 'Authorization': getToken() || '' },
+                body: formData
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.message || `Error ${res.status}`);
+            }
+
             this.showToast('¡Contenido subido exitosamente! 🎉', 'success');
-            
-            // Reset form
+
+            // Reset form and refresh gallery
             document.getElementById('uploadForm').reset();
             document.getElementById('filePreview').classList.add('hidden');
-            
-            // Switch to gallery tab
+
+            await this.loadGalleryContent();
+            await this.loadStats();
+
             this.switchTab('gallery');
-        }, 2000);
+
+        } catch (err) {
+            this.showToast(`Error al subir: ${err.message}`, 'error');
+        }
     }
-    
+
     saveDraft() {
         const title = document.getElementById('title').value;
         const category = document.getElementById('category').value;
-        
+
         if (!title) {
             this.showToast('Ingresa al menos un título para guardar el borrador', 'error');
             return;
         }
-        
-        // Save draft to localStorage
+
         const draft = {
             title,
             category,
             description: document.getElementById('description').value,
-            price: document.getElementById('price').value,
-            tags: document.getElementById('tags').value,
             savedAt: new Date().toISOString()
         };
-        
+
         localStorage.setItem('amiDraft', JSON.stringify(draft));
         this.showToast('Borrador guardado 💾', 'success');
     }
-    
+
     // ===== GALLERY =====
-    
-    loadGalleryContent() {
+
+    async loadGalleryContent() {
+        const galleryGrid = document.getElementById('galleryGrid');
+        galleryGrid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: #666;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                <p>Cargando galería...</p>
+            </div>
+        `;
+
+        try {
+            const data = await pbGet('/api/collections/amis_gallery/records?sort=-created&perPage=200');
+            this.galleryItems = data.items || [];
+            this.renderGallery(this.galleryItems);
+            this.updateCurrentStats();
+        } catch (err) {
+            galleryGrid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #e74c3c;">
+                    <i class="fas fa-exclamation-circle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                    <h3>Error al cargar la galería</h3>
+                    <p>${err.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    renderGallery(items) {
         const galleryGrid = document.getElementById('galleryGrid');
         galleryGrid.innerHTML = '';
-        
-        if (this.galleryItems.length === 0) {
+
+        if (items.length === 0) {
             galleryGrid.innerHTML = `
                 <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: #666;">
                     <i class="fas fa-images" style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;"></i>
@@ -394,37 +526,58 @@ class AdminPanel {
             `;
             return;
         }
-        
-        this.galleryItems.forEach(item => {
+
+        items.forEach(item => {
             const itemElement = this.createGalleryItem(item);
             galleryGrid.appendChild(itemElement);
         });
     }
-    
+
     createGalleryItem(item) {
         const div = document.createElement('div');
         div.className = 'gallery-item slide-up';
-        
-        const mediaType = item.files[0].type.startsWith('image/') ? 'image' : 'video';
-        const mediaElement = mediaType === 'image' ? 
-            `<img src="https://via.placeholder.com/300x200/${this.getCategoryColor(item.category)}/FFFFFF?text=${encodeURIComponent(item.title)}" alt="${item.title}">` :
-            `<video><source src="https://via.placeholder.com/300x200/${this.getCategoryColor(item.category)}/FFFFFF?text=${encodeURIComponent(item.title)}" type="video/mp4"></video>`;
-        
+
+        const isVideo = item.tipo === 'video';
+        const fileUrl = item.file ? getFileUrl(item, !isVideo) : ''; // thumb for images, full for videos
+        const publishedLabel = item.published ? 'Ocultar' : 'Publicar';
+        const publishedIcon = item.published ? 'eye-slash' : 'eye';
+        const categoryEmoji = this.getCategoryEmoji(item.category);
+        const dateStr = this.formatDate(item.created);
+
+        let mediaHTML = '';
+        if (fileUrl) {
+            if (isVideo) {
+                mediaHTML = `<video src="${fileUrl}" muted preload="metadata" style="width:100%;height:180px;object-fit:cover;"></video>`;
+            } else {
+                mediaHTML = `<img src="${fileUrl}" alt="${item.title}" loading="lazy" style="width:100%;height:180px;object-fit:cover;">`;
+            }
+        } else {
+            mediaHTML = `<div style="width:100%;height:180px;background:#f0e6f6;display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-${isVideo ? 'video' : 'image'}" style="font-size:3rem;color:#ba68c8;"></i>
+            </div>`;
+        }
+
+        // Badge: published vs draft
+        const badge = item.published
+            ? `<span style="background:#27ae60;color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:12px;">Publicado</span>`
+            : `<span style="background:#e74c3c;color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:12px;">Oculto</span>`;
+
         div.innerHTML = `
-            ${mediaElement}
+            ${mediaHTML}
             <div class="gallery-item-info">
                 <h4 class="gallery-item-title">${item.title}</h4>
                 <div class="gallery-item-meta">
-                    <span>${this.formatDate(item.uploadDate)}</span>
-                    <span>${this.getCategoryEmoji(item.category)} ${item.category}</span>
+                    <span>${dateStr}</span>
+                    <span>${categoryEmoji} ${item.category || ''}</span>
+                    ${badge}
                 </div>
                 <div class="gallery-item-actions">
                     <button class="action-edit" onclick="adminPanel.editItem('${item.id}')">
                         <i class="fas fa-edit"></i> Editar
                     </button>
                     <button class="action-publish" onclick="adminPanel.togglePublish('${item.id}')">
-                        <i class="fas fa-${item.status === 'published' ? 'eye-slash' : 'eye'}"></i>
-                        ${item.status === 'published' ? 'Ocultar' : 'Publicar'}
+                        <i class="fas fa-${publishedIcon}"></i>
+                        ${publishedLabel}
                     </button>
                     <button class="action-delete" onclick="adminPanel.deleteItem('${item.id}')">
                         <i class="fas fa-trash"></i>
@@ -432,29 +585,23 @@ class AdminPanel {
                 </div>
             </div>
         `;
-        
+
         return div;
     }
-    
+
     filterGallery(category) {
-        const filteredItems = category === 'all' ? 
-            this.galleryItems : 
-            this.galleryItems.filter(item => item.category === category);
-        
-        const galleryGrid = document.getElementById('galleryGrid');
-        galleryGrid.innerHTML = '';
-        
-        filteredItems.forEach(item => {
-            const itemElement = this.createGalleryItem(item);
-            galleryGrid.appendChild(itemElement);
-        });
+        const filtered = category === 'all'
+            ? this.galleryItems
+            : this.galleryItems.filter(item => item.category === category);
+
+        this.renderGallery(filtered);
     }
-    
+
     toggleView() {
         this.isGridView = !this.isGridView;
         const viewToggle = document.getElementById('viewToggle');
         const galleryGrid = document.getElementById('galleryGrid');
-        
+
         if (this.isGridView) {
             viewToggle.innerHTML = '<i class="fas fa-th"></i>';
             galleryGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
@@ -463,68 +610,115 @@ class AdminPanel {
             galleryGrid.style.gridTemplateColumns = '1fr';
         }
     }
-    
+
     // ===== ITEM ACTIONS =====
-    
+
     editItem(id) {
-        const item = this.galleryItems.find(item => item.id === id);
+        const item = this.galleryItems.find(i => i.id === id);
         if (!item) return;
-        
-        // Populate edit modal
-        document.getElementById('editTitle').value = item.title;
-        document.getElementById('editDescription').value = item.description;
-        
-        // Show edit modal
+
+        this.editingItemId = id;
+
+        document.getElementById('editTitle').value = item.title || '';
+        document.getElementById('editDescription').value = item.description || '';
+
+        // Add category field to edit modal if it exists
+        const editCategory = document.getElementById('editCategory');
+        if (editCategory) editCategory.value = item.category || '';
+
         document.getElementById('editModal').classList.add('active');
     }
-    
-    togglePublish(id) {
-        const item = this.galleryItems.find(item => item.id === id);
-        if (!item) return;
-        
-        item.status = item.status === 'published' ? 'draft' : 'published';
-        this.saveToLocalStorage();
-        this.loadGalleryContent();
-        
-        const action = item.status === 'published' ? 'publicado' : 'ocultado';
-        this.showToast(`Contenido ${action}`, 'success');
+
+    async saveEditItem() {
+        if (!this.editingItemId) return;
+
+        const title = document.getElementById('editTitle').value.trim();
+        const description = document.getElementById('editDescription').value.trim();
+
+        if (!title) {
+            this.showToast('El título es requerido', 'error');
+            return;
+        }
+
+        try {
+            const patchData = { title, description };
+
+            const editCategory = document.getElementById('editCategory');
+            if (editCategory && editCategory.value) {
+                patchData.category = editCategory.value;
+            }
+
+            await pbPatch(`/api/collections/amis_gallery/records/${this.editingItemId}`, patchData);
+
+            this.showToast('Cambios guardados correctamente', 'success');
+            this.closeModal();
+            this.editingItemId = null;
+            await this.loadGalleryContent();
+
+        } catch (err) {
+            this.showToast(`Error al guardar: ${err.message}`, 'error');
+        }
     }
-    
-    deleteItem(id) {
+
+    async togglePublish(id) {
+        const item = this.galleryItems.find(i => i.id === id);
+        if (!item) return;
+
+        try {
+            await pbPatch(`/api/collections/amis_gallery/records/${id}`, {
+                published: !item.published
+            });
+
+            const action = !item.published ? 'publicado' : 'ocultado';
+            this.showToast(`Contenido ${action}`, 'success');
+            await this.loadGalleryContent();
+
+        } catch (err) {
+            this.showToast(`Error al cambiar estado: ${err.message}`, 'error');
+        }
+    }
+
+    async deleteItem(id) {
         if (!confirm('¿Estás segura de que quieres eliminar este contenido?')) {
             return;
         }
-        
-        this.galleryItems = this.galleryItems.filter(item => item.id !== id);
-        this.saveToLocalStorage();
-        this.loadGalleryContent();
-        this.loadStats();
-        
-        this.showToast('Contenido eliminado', 'success');
+
+        try {
+            await pbDelete(`/api/collections/amis_gallery/records/${id}`);
+            this.showToast('Contenido eliminado', 'success');
+            await this.loadGalleryContent();
+            await this.loadStats();
+
+        } catch (err) {
+            this.showToast(`Error al eliminar: ${err.message}`, 'error');
+        }
     }
-    
+
     // ===== STATISTICS =====
-    
-    loadStats() {
-        const totalImages = this.galleryItems.filter(item => 
-            item.files.some(file => file.type.startsWith('image/'))).length;
-        const totalVideos = this.galleryItems.filter(item => 
-            item.files.some(file => file.type.startsWith('video/'))).length;
-        const totalViews = this.galleryItems.reduce((sum, item) => sum + item.views, 0);
-        const totalLikes = this.galleryItems.reduce((sum, item) => sum + item.likes, 0);
-        
-        document.getElementById('totalImages').textContent = totalImages;
-        document.getElementById('totalVideos').textContent = totalVideos;
-        document.getElementById('totalViews').textContent = totalViews.toLocaleString();
-        document.getElementById('totalLikes').textContent = totalLikes.toLocaleString();
+
+    async loadStats() {
+        const totalImages = this.galleryItems.filter(i => i.tipo === 'imagen').length;
+        const totalVideos = this.galleryItems.filter(i => i.tipo === 'video').length;
+
+        const totalImagesEl = document.getElementById('totalImages');
+        const totalVideosEl = document.getElementById('totalVideos');
+        const totalViewsEl = document.getElementById('totalViews');
+        const totalLikesEl = document.getElementById('totalLikes');
+
+        if (totalImagesEl) totalImagesEl.textContent = totalImages;
+        if (totalVideosEl) totalVideosEl.textContent = totalVideos;
+        if (totalViewsEl) totalViewsEl.textContent = '—';
+        if (totalLikesEl) totalLikesEl.textContent = '—';
     }
-    
+
     loadRecentActivity() {
         const activityList = document.getElementById('activityList');
-        const recentItems = this.galleryItems
-            .sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate))
+        if (!activityList) return;
+
+        const recentItems = [...this.galleryItems]
+            .sort((a, b) => new Date(b.created) - new Date(a.created))
             .slice(0, 5);
-        
+
         if (recentItems.length === 0) {
             activityList.innerHTML = `
                 <div class="activity-item">
@@ -537,37 +731,40 @@ class AdminPanel {
             `;
             return;
         }
-        
+
         activityList.innerHTML = '';
         recentItems.forEach(item => {
             const activityItem = document.createElement('div');
             activityItem.className = 'activity-item';
-            
-            const icon = item.files[0].type.startsWith('image/') ? 'fa-image' : 'fa-video';
-            
+            const icon = item.tipo === 'video' ? 'fa-video' : 'fa-image';
             activityItem.innerHTML = `
                 <i class="fas ${icon}"></i>
                 <div class="activity-content">
-                    <h4>Nuevo contenido subido</h4>
-                    <p>${item.title} - ${this.formatDate(item.uploadDate)}</p>
+                    <h4>Contenido ${item.published ? 'publicado' : 'guardado'}</h4>
+                    <p>${item.title} - ${this.formatDate(item.created)}</p>
                 </div>
             `;
-            
             activityList.appendChild(activityItem);
         });
     }
-    
+
     loadAnalytics() {
-        // Simulated analytics data - here you would connect to real analytics
         const categoryStats = {};
         this.galleryItems.forEach(item => {
-            categoryStats[item.category] = (categoryStats[item.category] || 0) + 1;
+            const key = item.category || 'sin categoría';
+            categoryStats[key] = (categoryStats[key] || 0) + 1;
         });
-        
-        // Display category breakdown
+
         const categoryChart = document.getElementById('categoryChart');
+        if (!categoryChart) return;
+
         categoryChart.innerHTML = '';
-        
+
+        if (Object.keys(categoryStats).length === 0) {
+            categoryChart.innerHTML = '<p style="color:#999;text-align:center;padding:1rem;">Sin datos</p>';
+            return;
+        }
+
         Object.entries(categoryStats).forEach(([category, count]) => {
             const bar = document.createElement('div');
             bar.style.cssText = `
@@ -586,177 +783,195 @@ class AdminPanel {
             categoryChart.appendChild(bar);
         });
     }
-    
-    // ===== UTILITY FUNCTIONS =====
-    
-    loadDemoData() {
-        // Load from localStorage or create demo data
-        const savedItems = localStorage.getItem('amiGalleryItems');
-        if (savedItems) {
-            this.galleryItems = JSON.parse(savedItems);
-        } else {
-            // Create some demo content
-            this.galleryItems = [
-                {
-                    id: '1',
-                    title: 'Aretes Corazón Rosa',
-                    category: 'aretes',
-                    description: 'Hermosos aretes en forma de corazón, perfectos para ocasiones especiales.',
-                    price: 15.00,
-                    tags: ['rosa', 'corazón', 'elegante'],
-                    files: [{ name: 'aretes-rosa.jpg', type: 'image/jpeg', size: 1024000 }],
-                    uploadedBy: 'Demo',
-                    uploadDate: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-                    status: 'published',
-                    views: 45,
-                    likes: 12
-                },
-                {
-                    id: '2',
-                    title: 'Tutorial Llaveros Personalizados',
-                    category: 'videos',
-                    description: 'Video paso a paso para crear llaveros únicos.',
-                    price: null,
-                    tags: ['tutorial', 'llaveros', 'diy'],
-                    files: [{ name: 'tutorial-llaveros.mp4', type: 'video/mp4', size: 15600000 }],
-                    uploadedBy: 'Demo',
-                    uploadDate: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-                    status: 'published',
-                    views: 123,
-                    likes: 34
-                }
-            ];
-            this.saveToLocalStorage();
+
+    // ===== SETTINGS =====
+
+    async loadSettings() {
+        // Load WhatsApp settings from PocketBase, fallback to localStorage
+        try {
+            const waData = await this.getConfigFromPB('whatsapp_number');
+            const waMsgData = await this.getConfigFromPB('whatsapp_message');
+
+            const number = waData || localStorage.getItem('amis_wa_number') || '5492604201185';
+            const message = waMsgData || localStorage.getItem('amis_wa_message') || '¡Hola! Me interesa hacer un pedido de goma eva 💕';
+
+            document.getElementById('whatsappNumber').value = number;
+            document.getElementById('whatsappMessage').value = message;
+
+        } catch (err) {
+            // Fallback to localStorage
+            const waLS = JSON.parse(localStorage.getItem('whatsappSettings') || '{"number":"5492604201185","message":"¡Hola! Me interesa hacer un pedido"}');
+            document.getElementById('whatsappNumber').value = waLS.number;
+            document.getElementById('whatsappMessage').value = waLS.message;
         }
-    }
-    
-    saveToLocalStorage() {
-        localStorage.setItem('amiGalleryItems', JSON.stringify(this.galleryItems));
-    }
-    
-    getCategoryColor(category) {
-        const colors = {
-            'aretes': 'F8C8DC',
-            'llaveros': 'BA68C8',
-            'decoraciones': '81C784',
-            'manualidades': 'FFD54F',
-            'videos': '87CEEB'
-        };
-        return colors[category] || 'CCCCCC';
-    }
-    
-    getCategoryEmoji(category) {
-        const emojis = {
-            'aretes': '🎀',
-            'llaveros': '🔑',
-            'decoraciones': '🎄',
-            'manualidades': '🎨',
-            'videos': '📹'
-        };
-        return emojis[category] || '📁';
-    }
-    
-    formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-        });
-    }
-    
-    closeModal() {
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.classList.remove('active');
-        });
-    }
-    
-    showToast(message, type = 'success') {
-        const toast = document.getElementById('toast');
-        const toastContent = toast.querySelector('.toast-content');
-        const toastMessage = document.getElementById('toastMessage');
-        
-        toastMessage.textContent = message;
-        toastContent.className = `toast-content ${type}`;
-        
-        toast.classList.add('show');
-        
-        // Auto hide after 4 seconds
-        setTimeout(() => {
-            this.hideToast();
-        }, 4000);
-    }
-    
-    hideToast() {
-        document.getElementById('toast').classList.remove('show');
-    }
-    
-    // ===== SETTINGS FUNCTIONS =====
-    
-    loadSettings() {
-        // Load WhatsApp settings
-        const whatsappData = JSON.parse(localStorage.getItem('whatsappSettings') || '{"number": "5492604201185", "message": "¡Hola! Me interesa hacer un pedido de goma eva 💕"}');
-        document.getElementById('whatsappNumber').value = whatsappData.number;
-        document.getElementById('whatsappMessage').value = whatsappData.message;
-        
-        // Load about stats
-        const statsData = JSON.parse(localStorage.getItem('aboutStats') || '{"creaciones": 1000, "clientes": 277}');
-        document.getElementById('totalCreaciones').value = statsData.creaciones;
-        document.getElementById('clientesFelices').value = statsData.clientes;
-        
-        // Update current content stats
+
+        // Load about stats from PocketBase, fallback to localStorage
+        try {
+            const creaciones = await this.getConfigFromPB('stat_creaciones');
+            const clientes = await this.getConfigFromPB('stat_clientes');
+
+            document.getElementById('totalCreaciones').value = creaciones || 1000;
+            document.getElementById('clientesFelices').value = clientes || 277;
+
+        } catch (err) {
+            const statsLS = JSON.parse(localStorage.getItem('aboutStats') || '{"creaciones":1000,"clientes":277}');
+            document.getElementById('totalCreaciones').value = statsLS.creaciones;
+            document.getElementById('clientesFelices').value = statsLS.clientes;
+        }
+
         this.updateCurrentStats();
     }
-    
-    saveWhatsappSettings() {
+
+    async getConfigFromPB(key) {
+        try {
+            const data = await pbGet(`/api/collections/amis_config/records?filter=(key="${key}")`);
+            const record = (data.items || [])[0];
+            return record ? record.value : null;
+        } catch {
+            return null;
+        }
+    }
+
+    async setConfigInPB(key, value) {
+        try {
+            // Try to find existing record
+            const data = await pbGet(`/api/collections/amis_config/records?filter=(key="${key}")`);
+            const existing = (data.items || [])[0];
+
+            if (existing) {
+                await pbPatch(`/api/collections/amis_config/records/${existing.id}`, { value });
+            } else {
+                // Create new record
+                const res = await fetch(`${PB_URL}/api/collections/amis_config/records`, {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({ key, value })
+                });
+                if (!res.ok) throw new Error(`Failed to create config ${key}`);
+            }
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    async saveWhatsappSettings() {
         const number = document.getElementById('whatsappNumber').value.trim();
         const message = document.getElementById('whatsappMessage').value.trim();
-        
+
         if (!number) {
             this.showToast('El número de WhatsApp es requerido', 'error');
             return;
         }
-        
-        const whatsappData = { number, message };
-        localStorage.setItem('whatsappSettings', JSON.stringify(whatsappData));
-        
-        // Update the website's WhatsApp links
-        this.updateWhatsappLinks(number, message);
-        
-        this.showToast('Configuración de WhatsApp guardada exitosamente! 🎉', 'success');
+
+        try {
+            await this.setConfigInPB('whatsapp_number', number);
+            await this.setConfigInPB('whatsapp_message', message);
+
+            // Also update localStorage for compatibility with main.js
+            localStorage.setItem('whatsappSettings', JSON.stringify({ number, message }));
+            localStorage.setItem('amis_wa_number', number);
+            localStorage.setItem('amis_wa_message', message);
+
+            this.showToast('Configuración de WhatsApp guardada exitosamente! 🎉', 'success');
+
+        } catch (err) {
+            // Fallback: save only to localStorage
+            localStorage.setItem('whatsappSettings', JSON.stringify({ number, message }));
+            this.showToast('Guardado localmente (PocketBase no disponible)', 'info');
+        }
     }
-    
-    saveAboutStats() {
+
+    async saveAboutStats() {
         const creaciones = parseInt(document.getElementById('totalCreaciones').value) || 1000;
         const clientes = parseInt(document.getElementById('clientesFelices').value) || 277;
-        
-        const statsData = { creaciones, clientes };
-        localStorage.setItem('aboutStats', JSON.stringify(statsData));
-        
-        // Update the website's stats
-        this.updateWebsiteStats(creaciones, clientes);
-        
-        this.showToast('Estadísticas actualizadas exitosamente! 📊', 'success');
+
+        try {
+            await this.setConfigInPB('stat_creaciones', String(creaciones));
+            await this.setConfigInPB('stat_clientes', String(clientes));
+
+            // Also update localStorage for compatibility with main.js
+            localStorage.setItem('aboutStats', JSON.stringify({ creaciones, clientes }));
+
+            this.updateWebsiteStats(creaciones, clientes);
+            this.showToast('Estadísticas actualizadas exitosamente! 📊', 'success');
+
+        } catch (err) {
+            localStorage.setItem('aboutStats', JSON.stringify({ creaciones, clientes }));
+            this.showToast('Guardado localmente (PocketBase no disponible)', 'info');
+        }
     }
-    
-    updateWhatsappLinks(number, message) {
-        // This would update the main website's WhatsApp links
-        // For now, we'll just store it for future use
-        console.log('WhatsApp updated:', number, message);
-    }
-    
+
     updateWebsiteStats(creaciones, clientes) {
-        // This would update the main website's stats
-        // For now, we'll just store it for future use  
-        console.log('Stats updated:', creaciones, clientes);
+        // Update the main website's stats via localStorage
+        const statEls = document.querySelectorAll('.stat-number');
+        if (statEls[0]) {
+            statEls[0].dataset.target = creaciones;
+            statEls[0].textContent = creaciones + '+';
+        }
+        if (statEls[1]) {
+            statEls[1].dataset.target = clientes;
+            statEls[1].textContent = clientes;
+        }
     }
-    
+
     updateCurrentStats() {
-        const imageCount = this.galleryItems.filter(item => item.type === 'image' || item.category === 'imagenes').length;
-        const videoCount = this.galleryItems.filter(item => item.type === 'video' || item.category === 'videos').length;
-        
-        document.getElementById('currentImages').textContent = imageCount;
-        document.getElementById('currentVideos').textContent = videoCount;
+        const imageCount = this.galleryItems.filter(i => i.tipo === 'imagen').length;
+        const videoCount = this.galleryItems.filter(i => i.tipo === 'video').length;
+
+        const currentImages = document.getElementById('currentImages');
+        const currentVideos = document.getElementById('currentVideos');
+
+        if (currentImages) currentImages.textContent = imageCount;
+        if (currentVideos) currentVideos.textContent = videoCount;
+    }
+
+    // ===== UTILITY FUNCTIONS =====
+
+    getCategoryEmoji(category) {
+        const emojis = {
+            'baby-shower': '🍼',
+            'material-educativo': '📚',
+            'personajes': '🦸',
+            'recursos-didacticos': '📐',
+            'toppers': '🎂',
+            'libros-sensoriales': '📕'
+        };
+        return emojis[category] || '📁';
+    }
+
+    formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    }
+
+    closeModal() {
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.classList.remove('active');
+        });
+        this.editingItemId = null;
+    }
+
+    showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const toastContent = toast.querySelector('.toast-content');
+        const toastMessage = document.getElementById('toastMessage');
+
+        toastMessage.textContent = message;
+        toastContent.className = `toast-content ${type}`;
+
+        toast.classList.add('show');
+
+        setTimeout(() => {
+            this.hideToast();
+        }, 4000);
+    }
+
+    hideToast() {
+        document.getElementById('toast').classList.remove('show');
     }
 }
 
@@ -764,16 +979,3 @@ class AdminPanel {
 document.addEventListener('DOMContentLoaded', () => {
     window.adminPanel = new AdminPanel();
 });
-
-// Service Worker for PWA capabilities (optional)
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-                console.log('SW registered: ', registration);
-            })
-            .catch(registrationError => {
-                console.log('SW registration failed: ', registrationError);
-            });
-    });
-}
