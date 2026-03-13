@@ -498,7 +498,7 @@ class AdminPanel {
         `;
 
         try {
-            const data = await pbGet('/api/collections/amis_gallery/records?sort=-created&perPage=200');
+            const data = await pbGet('/api/collections/amis_gallery/records?sort=-id&perPage=200');
             this.galleryItems = data.items || [];
             this.renderGallery(this.galleryItems);
             this.updateCurrentStats();

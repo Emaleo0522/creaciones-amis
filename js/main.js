@@ -312,9 +312,9 @@ function initSmoothScroll() {
             const headerHeight = document.getElementById('header')?.offsetHeight || 70;
 
             gsap.to(window, {
-                duration: 0.9,
+                duration: 0.5,
                 scrollTo: { y: target, offsetY: headerHeight },
-                ease: 'power2.inOut'
+                ease: 'power2.out'
             });
         });
     });
