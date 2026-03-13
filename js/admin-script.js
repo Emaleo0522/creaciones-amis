@@ -82,7 +82,10 @@ async function pbPatch(path, data) {
         headers: authHeaders(),
         body: JSON.stringify(data)
     });
-    if (!res.ok) throw new Error(`PB PATCH ${path} failed: ${res.status}`);
+    if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(`PB PATCH ${path} failed: ${res.status} — ${errBody?.message || JSON.stringify(errBody)}`);
+    }
     return res.json();
 }
 
@@ -666,11 +669,23 @@ class AdminPanel {
         if (!item) return;
 
         try {
-            await pbPatch(`/api/collections/amis_gallery/records/${id}`, {
-                published: !item.published
+            // Use FormData (same as upload) — JSON PATCH of a single Bool field
+            // can return 400 in some PocketBase versions due to validation quirks
+            const fd = new FormData();
+            fd.append('published', item.published ? 'false' : 'true');
+
+            const res = await fetch(`${PB_URL}/api/collections/amis_gallery/records/${id}`, {
+                method: 'PATCH',
+                headers: { 'Authorization': getToken() || '' },
+                body: fd
             });
 
-            const action = !item.published ? 'publicado' : 'ocultado';
+            if (!res.ok) {
+                const errBody = await res.json().catch(() => ({}));
+                throw new Error(`${res.status} — ${errBody?.message || JSON.stringify(errBody)}`);
+            }
+
+            const action = item.published ? 'ocultado' : 'publicado';
             this.showToast(`Contenido ${action}`, 'success');
             await this.loadGalleryContent();
 
