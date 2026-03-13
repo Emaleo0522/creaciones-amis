@@ -432,10 +432,9 @@ ${data.mensaje}
 // GALLERY — MEDIA FILES
 // ============================================
 
-// NOTE: URL uses Cloudflare Tunnel (HTTPS). If it breaks after server reboot,
-// SSH in and run: sudo journalctl -u pocketbase-tunnel | grep trycloudflare
-// Then update this URL + the same line in admin-script.js
-const PB_URL = 'https://hats-driven-bucks-shares.trycloudflare.com';
+// Backend: PocketBase via nginx + Let's Encrypt (HTTPS permanente)
+// URL estable — no cambia con reinicios del servidor
+const PB_URL = 'https://161-153-203-83.sslip.io';
 
 // Local assets fallback — used when PocketBase is unavailable
 const localImages = [
