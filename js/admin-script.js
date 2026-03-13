@@ -669,21 +669,16 @@ class AdminPanel {
         if (!item) return;
 
         try {
-            // Use FormData (same as upload) — JSON PATCH of a single Bool field
-            // can return 400 in some PocketBase versions due to validation quirks
-            const fd = new FormData();
-            fd.append('published', item.published ? 'false' : 'true');
-
-            const res = await fetch(`${PB_URL}/api/collections/amis_gallery/records/${id}`, {
-                method: 'PATCH',
-                headers: { 'Authorization': getToken() || '' },
-                body: fd
+            // Send all non-file fields — PocketBase runs full validation even on
+            // PATCH, so a single-field update can fail if required fields are absent
+            await pbPatch(`/api/collections/amis_gallery/records/${id}`, {
+                title: item.title || '',
+                description: item.description || '',
+                category: item.category || '',
+                tipo: item.tipo || 'image',
+                orden: item.orden ?? 0,
+                published: !item.published
             });
-
-            if (!res.ok) {
-                const errBody = await res.json().catch(() => ({}));
-                throw new Error(`${res.status} — ${errBody?.message || JSON.stringify(errBody)}`);
-            }
 
             const action = item.published ? 'ocultado' : 'publicado';
             this.showToast(`Contenido ${action}`, 'success');
