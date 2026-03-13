@@ -432,7 +432,10 @@ ${data.mensaje}
 // GALLERY — MEDIA FILES
 // ============================================
 
-const PB_URL = 'http://161.153.203.83:8090';
+// NOTE: URL uses Cloudflare Tunnel (HTTPS). If it breaks after server reboot,
+// SSH in and run: sudo journalctl -u pocketbase-tunnel | grep trycloudflare
+// Then update this URL + the same line in admin-script.js
+const PB_URL = 'https://hats-driven-bucks-shares.trycloudflare.com';
 
 // Local assets fallback — used when PocketBase is unavailable
 const localImages = [

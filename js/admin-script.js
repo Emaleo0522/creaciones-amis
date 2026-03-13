@@ -1,7 +1,10 @@
 // ===== ADMIN PANEL JAVASCRIPT - CREACIONES AMIS =====
-// Backend: PocketBase http://161.153.203.83:8090
+// Backend: PocketBase via Cloudflare Tunnel (HTTPS)
+// If tunnel URL changes (after server reboot): SSH in, check new URL with:
+//   sudo journalctl -u pocketbase-tunnel | grep trycloudflare
+// Then update PB_URL here + in main.js
 
-const PB_URL = 'http://161.153.203.83:8090';
+const PB_URL = 'https://hats-driven-bucks-shares.trycloudflare.com';
 const ADMIN_EMAIL = 'admin@creacionesamis.sr';
 
 // ===== IMAGE COMPRESSION =====
