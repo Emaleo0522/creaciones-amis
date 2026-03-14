@@ -166,10 +166,9 @@ class AdminPanel {
             this.toggleView();
         });
 
-        // Category filter
-        document.getElementById('categoryFilter').addEventListener('change', (e) => {
-            this.filterGallery(e.target.value);
-        });
+        // Tipo + category filters
+        document.getElementById('tipoFilter').addEventListener('change', () => this.applyFilters());
+        document.getElementById('categoryFilter').addEventListener('change', () => this.applyFilters());
 
         // Close modals
         document.querySelectorAll('.close-modal').forEach(btn => {
@@ -628,12 +627,20 @@ class AdminPanel {
         return div;
     }
 
-    filterGallery(category) {
-        const filtered = category === 'all'
-            ? this.galleryItems
-            : this.galleryItems.filter(item => item.category === category);
+    applyFilters() {
+        const tipo = document.getElementById('tipoFilter')?.value || 'all';
+        const category = document.getElementById('categoryFilter')?.value ?? 'all';
+
+        let filtered = this.galleryItems;
+        if (tipo !== 'all') filtered = filtered.filter(i => i.tipo === tipo);
+        if (category !== 'all') filtered = filtered.filter(i => (i.category || '') === category);
 
         this.renderGallery(filtered);
+    }
+
+    filterGallery(category) {
+        document.getElementById('categoryFilter').value = category;
+        this.applyFilters();
     }
 
     toggleView() {
