@@ -1476,14 +1476,14 @@ button {
     padding: 24px 20px;
   }
 
-  /* Gallery mobile */
+  /* Gallery mobile — 1 columna para que descripción sea legible */
   .image-gallery {
-    columns: 2;
-    column-gap: 10px;
+    columns: 1;
+    column-gap: 0;
   }
 
   .image-gallery .gallery-item {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
   }
 
   /* Contact mobile */
