@@ -118,6 +118,7 @@ class AdminPanel {
         this.galleryItems = [];
         this.isGridView = true;
         this.editingItemId = null;
+        this.selectedFile = null;
 
         this.init();
     }
@@ -314,7 +315,7 @@ class AdminPanel {
         });
 
         fileInput.addEventListener('change', (e) => {
-            this.handleFiles(e.target.files);
+            if (e.target.files.length > 0) this.handleFiles(e.target.files);
         });
 
         dropZone.addEventListener('dragover', (e) => {
@@ -337,16 +338,25 @@ class AdminPanel {
     }
 
     handleFiles(files) {
+        const file = files[0];
+        if (!file || !this.validateFile(file)) return;
+
+        this.selectedFile = file;
+
+        // Ocultar dropzone, mostrar preview
+        document.getElementById('dropZone').classList.add('hidden');
         const filePreview = document.getElementById('filePreview');
         filePreview.innerHTML = '';
         filePreview.classList.remove('hidden');
+        filePreview.appendChild(this.createFilePreview(file));
+    }
 
-        Array.from(files).forEach((file) => {
-            if (this.validateFile(file)) {
-                const previewItem = this.createFilePreview(file);
-                filePreview.appendChild(previewItem);
-            }
-        });
+    clearSelectedFile() {
+        this.selectedFile = null;
+        document.getElementById('fileInput').value = '';
+        document.getElementById('filePreview').innerHTML = '';
+        document.getElementById('filePreview').classList.add('hidden');
+        document.getElementById('dropZone').classList.remove('hidden');
     }
 
     validateFile(file) {
@@ -377,16 +387,32 @@ class AdminPanel {
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         `;
 
+        // Botón X para eliminar y elegir otro
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.title = 'Eliminar y elegir otro archivo';
+        removeBtn.style.cssText = `
+            position: absolute; top: 6px; right: 6px;
+            background: rgba(0,0,0,0.6); color: #fff;
+            border: none; border-radius: 50%;
+            width: 26px; height: 26px; font-size: 1rem;
+            line-height: 1; cursor: pointer; z-index: 10;
+            display: flex; align-items: center; justify-content: center;
+        `;
+        removeBtn.addEventListener('click', () => this.clearSelectedFile());
+        div.appendChild(removeBtn);
+
         if (file.type.startsWith('image/')) {
             const img = document.createElement('img');
-            img.style.cssText = `width: 100%; height: 100px; object-fit: cover;`;
+            img.style.cssText = `width: 100%; height: 120px; object-fit: cover;`;
             const reader = new FileReader();
             reader.onload = (e) => img.src = e.target.result;
             reader.readAsDataURL(file);
             div.appendChild(img);
         } else {
             const video = document.createElement('video');
-            video.style.cssText = `width: 100%; height: 100px; object-fit: cover;`;
+            video.style.cssText = `width: 100%; height: 120px; object-fit: cover;`;
             video.controls = false;
             const reader = new FileReader();
             reader.onload = (e) => video.src = e.target.result;
@@ -407,20 +433,19 @@ class AdminPanel {
         const category = document.getElementById('category').value;
         const description = document.getElementById('description').value.trim();
         const medidas = document.getElementById('medidas')?.value.trim() || '';
-        const files = document.getElementById('fileInput').files;
 
         if (!title || !category) {
             this.showToast('Por favor completa los campos obligatorios', 'error');
             return;
         }
 
-        if (files.length === 0) {
-            this.showToast('Por favor selecciona al menos un archivo', 'error');
+        if (!this.selectedFile) {
+            this.showToast('Por favor selecciona un archivo', 'error');
             return;
         }
 
-        // Upload each file to PocketBase
-        this.uploadToPocketBase(title, category, description, medidas, files[0]);
+        // Upload file to PocketBase
+        this.uploadToPocketBase(title, category, description, medidas, this.selectedFile);
     }
 
     async uploadToPocketBase(title, category, description, medidas, file) {
@@ -467,7 +492,7 @@ class AdminPanel {
 
             // Reset form and refresh gallery
             document.getElementById('uploadForm').reset();
-            document.getElementById('filePreview').classList.add('hidden');
+            this.clearSelectedFile();
 
             await this.loadGalleryContent();
             await this.loadStats();
