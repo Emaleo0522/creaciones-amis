@@ -91,12 +91,12 @@
                     <div class="filters">
                         <select id="categoryFilter">
                             <option value="all">Todas las categorías</option>
-                            <option value="baby-shower">🍼 Baby Shower</option>
-                            <option value="material-educativo">📚 Material Educativo</option>
-                            <option value="personajes">🦸 Personajes</option>
-                            <option value="recursos-didacticos">📐 Recursos Didácticos</option>
-                            <option value="toppers">🎂 Toppers</option>
-                            <option value="libros-sensoriales">📕 Libros Sensoriales</option>
+                            <option value="">Sin categoría</option>
+                            <option value="apliques">Apliques</option>
+                            <option value="carpetas-cuadernos">Carpetas y cuadernos</option>
+                            <option value="frisos">Frisos</option>
+                            <option value="recursos-didacticos">Recursos didácticos</option>
+                            <option value="topper-decoraciones">Topper y decoraciones</option>
                         </select>
                         <button id="viewToggle" class="btn-secondary">
                             <i class="fas fa-th"></i>
@@ -136,15 +136,14 @@
                         </div>
                         
                         <div class="form-group">
-                            <label for="category">Categoría *</label>
-                            <select id="category" required>
-                                <option value="">Seleccionar categoría</option>
-                                <option value="baby-shower">🍼 Baby Shower</option>
-                                <option value="material-educativo">📚 Material Educativo</option>
-                                <option value="personajes">🦸 Personajes Temáticos</option>
-                                <option value="recursos-didacticos">📐 Recursos Didácticos</option>
-                                <option value="toppers">🎂 Toppers & Decoraciones</option>
-                                <option value="libros-sensoriales">📕 Libros Sensoriales</option>
+                            <label for="category">Categoría</label>
+                            <select id="category">
+                                <option value="">Sin categoría</option>
+                                <option value="apliques">Apliques</option>
+                                <option value="carpetas-cuadernos">Carpetas y cuadernos</option>
+                                <option value="frisos">Frisos</option>
+                                <option value="recursos-didacticos">Recursos didácticos</option>
+                                <option value="topper-decoraciones">Topper y decoraciones</option>
                             </select>
                         </div>
                     </div>
@@ -315,6 +314,18 @@
                 <div class="form-group" style="margin-top:12px;">
                     <label for="editMedidas">Medidas (opcional)</label>
                     <input type="text" id="editMedidas" placeholder="Ej: 20 x 15 cm">
+                </div>
+
+                <div class="form-group" style="margin-top:12px;">
+                    <label for="editCategory">Categoría</label>
+                    <select id="editCategory">
+                        <option value="">Sin categoría</option>
+                        <option value="apliques">Apliques</option>
+                        <option value="carpetas-cuadernos">Carpetas y cuadernos</option>
+                        <option value="frisos">Frisos</option>
+                        <option value="recursos-didacticos">Recursos didácticos</option>
+                        <option value="topper-decoraciones">Topper y decoraciones</option>
+                    </select>
                 </div>
 
                 <div class="form-actions">

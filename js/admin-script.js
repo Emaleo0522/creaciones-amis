@@ -688,7 +688,7 @@ class AdminPanel {
             const patchData = { title, description, medidas };
 
             const editCategory = document.getElementById('editCategory');
-            if (editCategory && editCategory.value) {
+            if (editCategory) {
                 patchData.category = editCategory.value;
             }
 
