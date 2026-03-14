@@ -549,9 +549,20 @@ function renderImageGallery(images) {
         galleryItem.setAttribute('aria-label', `Ver imagen: ${imgTitle}`);
         galleryItem.setAttribute('data-title', imgTitle);
 
+        // Build caption only if there's description or medidas
+        const hasDesc = item.description && item.description.trim();
+        const hasMedidas = item.medidas && item.medidas.trim();
+        const captionHtml = (hasDesc || hasMedidas) ? `
+            <div class="gallery-caption">
+              <div class="gallery-caption-title">${imgTitle}</div>
+              ${hasDesc ? `<div class="gallery-caption-desc">${item.description}</div>` : ''}
+              ${hasMedidas ? `<div class="gallery-caption-medidas">📐 Medidas: ${item.medidas}</div>` : ''}
+            </div>` : '';
+
         galleryItem.innerHTML = `
             <img src="${item.thumbUrl}" alt="${imgTitle}" loading="lazy">
             <i class="fas fa-search gallery-zoom-icon" aria-hidden="true"></i>
+            ${captionHtml}
         `;
 
         galleryItem.addEventListener('click', () => openLightbox(index, imageList));
@@ -744,6 +755,31 @@ function openLightbox(index, imagesList) {
     lightboxImage.alt = current.title || `Creación AMIS ${currentImageIndex + 1}`;
     currentSpan.textContent = currentImageIndex + 1;
     totalSpan.textContent = currentImageList.length;
+
+    // Update lightbox info (description + medidas)
+    let infoEl = document.getElementById('lightbox-info');
+    if (!infoEl) {
+        infoEl = document.createElement('div');
+        infoEl.id = 'lightbox-info';
+        infoEl.className = 'lightbox-info';
+        // Insert after the image counter element
+        const counter = lightbox.querySelector('.lightbox-counter') || currentSpan?.closest('.lightbox-counter');
+        if (counter) counter.after(infoEl);
+        else lightbox.appendChild(infoEl);
+    }
+    const lbTitle = current.title || '';
+    const lbDesc = current.description?.trim() || '';
+    const lbMedidas = current.medidas?.trim() || '';
+    if (lbTitle || lbDesc || lbMedidas) {
+        infoEl.innerHTML = `
+            ${lbTitle ? `<div class="lightbox-info-title">${lbTitle}</div>` : ''}
+            ${lbDesc ? `<div class="lightbox-info-desc">${lbDesc}</div>` : ''}
+            ${lbMedidas ? `<div class="lightbox-info-medidas">📐 Medidas: ${lbMedidas}</div>` : ''}
+        `;
+        infoEl.style.display = 'block';
+    } else {
+        infoEl.style.display = 'none';
+    }
 
     lightbox.style.display = 'block';
     document.body.style.overflow = 'hidden';

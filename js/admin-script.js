@@ -406,6 +406,7 @@ class AdminPanel {
         const title = document.getElementById('title').value.trim();
         const category = document.getElementById('category').value;
         const description = document.getElementById('description').value.trim();
+        const medidas = document.getElementById('medidas')?.value.trim() || '';
         const files = document.getElementById('fileInput').files;
 
         if (!title || !category) {
@@ -419,10 +420,10 @@ class AdminPanel {
         }
 
         // Upload each file to PocketBase
-        this.uploadToPocketBase(title, category, description, files[0]);
+        this.uploadToPocketBase(title, category, description, medidas, files[0]);
     }
 
-    async uploadToPocketBase(title, category, description, file) {
+    async uploadToPocketBase(title, category, description, medidas, file) {
         try {
             let processedFile = file;
 
@@ -444,6 +445,7 @@ class AdminPanel {
             const formData = new FormData();
             formData.append('title', title);
             formData.append('description', description);
+            if (medidas && medidas.trim()) formData.append('medidas', medidas.trim());
             formData.append('category', category);
             formData.append('tipo', tipo);
             formData.append('published', 'true');
@@ -634,6 +636,9 @@ class AdminPanel {
         document.getElementById('editTitle').value = item.title || '';
         document.getElementById('editDescription').value = item.description || '';
 
+        const editMedidasEl = document.getElementById('editMedidas');
+        if (editMedidasEl) editMedidasEl.value = item.medidas || '';
+
         // Add category field to edit modal if it exists
         const editCategory = document.getElementById('editCategory');
         if (editCategory) editCategory.value = item.category || '';
@@ -653,7 +658,9 @@ class AdminPanel {
         }
 
         try {
-            const patchData = { title, description };
+            const editMedidasEl = document.getElementById('editMedidas');
+            const medidas = editMedidasEl ? editMedidasEl.value.trim() : '';
+            const patchData = { title, description, medidas };
 
             const editCategory = document.getElementById('editCategory');
             if (editCategory && editCategory.value) {

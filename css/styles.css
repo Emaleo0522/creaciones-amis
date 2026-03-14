@@ -649,6 +649,67 @@ button {
   transform: translate(-50%, -50%) scale(1);
 }
 
+/* ── Gallery caption (descripción + medidas) ────────────── */
+.gallery-caption {
+  padding: 10px 12px 8px;
+  background: rgba(255,255,255,0.96);
+  border-top: 1px solid rgba(233,30,99,0.1);
+  min-height: 0;
+}
+.gallery-caption-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 3px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gallery-caption-desc {
+  font-size: 0.72rem;
+  color: #666;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 2px;
+}
+.gallery-caption-medidas {
+  font-size: 0.68rem;
+  color: #E91E63;
+  font-weight: 500;
+  margin-top: 3px;
+  letter-spacing: 0.2px;
+}
+
+/* ── Lightbox info section ──────────────────────────────── */
+.lightbox-info {
+  text-align: center;
+  padding: 10px 20px 0;
+  max-width: 680px;
+  margin: 0 auto;
+}
+.lightbox-info-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 5px;
+  letter-spacing: 0.3px;
+}
+.lightbox-info-desc {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+.lightbox-info-medidas {
+  font-size: 0.8rem;
+  color: #f48fb1;
+  font-weight: 500;
+}
+
 /* Video Gallery */
 .video-gallery-preview {
   max-width: 900px;
