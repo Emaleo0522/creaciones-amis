@@ -827,6 +827,25 @@ function changeImage(direction) {
             lightboxImage.alt = current.title || `Creación AMIS ${currentImageIndex + 1}`;
             currentSpan.textContent = currentImageIndex + 1;
 
+            // Update description panel for the new image
+            const infoEl = document.getElementById('lightbox-info');
+            if (infoEl) {
+                const lbTitle = current.title || '';
+                const lbDesc = current.description?.trim() || '';
+                const lbMedidas = current.medidas?.trim() || '';
+                if (lbTitle || lbDesc || lbMedidas) {
+                    infoEl.innerHTML = `
+                        ${lbTitle ? `<div class="lightbox-info-title">${lbTitle}</div>` : ''}
+                        ${lbDesc ? `<div class="lightbox-info-desc">${lbDesc}</div>` : ''}
+                        ${lbMedidas ? `<div class="lightbox-info-medidas">📐 Medidas: ${lbMedidas}</div>` : ''}
+                    `;
+                    infoEl.style.display = 'block';
+                } else {
+                    infoEl.innerHTML = '';
+                    infoEl.style.display = 'none';
+                }
+            }
+
             gsap.to(lightboxImage, {
                 opacity: 1,
                 scale: 1,
