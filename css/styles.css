@@ -830,8 +830,10 @@ button {
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 12px;
 }
 
 .lightbox-close {
@@ -1484,6 +1486,20 @@ button {
 
   .image-gallery .gallery-item {
     margin-bottom: 12px;
+  }
+
+  /* Lightbox mobile — imagen más chica para que el detalle quepa abajo */
+  #lightbox-image {
+    max-height: 62vh;
+  }
+
+  .lightbox-info {
+    padding: 6px 16px 0;
+    max-width: 90vw;
+  }
+
+  .lightbox-counter {
+    bottom: 10px;
   }
 
   /* Contact mobile */
